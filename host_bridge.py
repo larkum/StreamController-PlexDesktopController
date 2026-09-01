@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import time
@@ -103,6 +104,82 @@ def launch_plex(in_flatpak: bool | None = None) -> None:
         raise PlexControlError(f"Could not launch Plex Desktop: {exc}") from exc
 
 
+def _run_wpctl(
+    *arguments: str,
+    in_flatpak: bool | None = None,
+) -> subprocess.CompletedProcess[str]:
+    command = [*host_prefix(in_flatpak), "wpctl", *arguments]
+    try:
+        return subprocess.run(
+            command,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        raise PlexControlError(f"Could not control Plex audio: {exc}") from exc
+
+
+def _audio_stream_ids(status_output: str) -> list[str]:
+    """Return PipeWire node IDs from the Audio/Streams section."""
+    in_audio = False
+    in_streams = False
+    stream_ids: list[str] = []
+    for line in status_output.splitlines():
+        stripped = line.strip()
+        if stripped == "Audio":
+            in_audio = True
+            continue
+        if in_audio and stripped == "Video":
+            break
+        if in_audio and "Streams:" in stripped:
+            in_streams = True
+            continue
+        if not in_streams:
+            continue
+        match = re.search(r"(?:^|[\s*])([0-9]+)\.", line)
+        if match:
+            stream_ids.append(match.group(1))
+    return stream_ids
+
+
+def mute_plex_audio(in_flatpak: bool | None = None) -> None:
+    """Toggle only Plex Desktop's PipeWire audio streams."""
+    status = _run_wpctl("status", "--name", in_flatpak=in_flatpak)
+    if status.returncode != 0:
+        detail = (status.stderr or status.stdout).strip()
+        raise PlexControlError(detail or "Could not read Linux audio streams.")
+
+    plex_streams: list[str] = []
+    for stream_id in _audio_stream_ids(status.stdout):
+        inspected = _run_wpctl("inspect", stream_id, in_flatpak=in_flatpak)
+        identity = f"{inspected.stdout}\n{inspected.stderr}".lower()
+        if inspected.returncode == 0 and "plex" in identity and "plexamp" not in identity:
+            plex_streams.append(stream_id)
+
+    if not plex_streams:
+        raise PlexControlError(
+            "Plex Desktop is not currently providing an audio stream. Start playback and try again."
+        )
+
+    mute_states: list[bool] = []
+    for stream_id in plex_streams:
+        volume = _run_wpctl("get-volume", stream_id, in_flatpak=in_flatpak)
+        if volume.returncode != 0:
+            detail = (volume.stderr or volume.stdout).strip()
+            raise PlexControlError(detail or "Could not read Plex Desktop's mute state.")
+        mute_states.append("[MUTED]" in volume.stdout.upper())
+
+    target = "0" if all(mute_states) else "1"
+    for stream_id in plex_streams:
+        changed = _run_wpctl("set-mute", stream_id, target, in_flatpak=in_flatpak)
+        if changed.returncode != 0:
+            detail = (changed.stderr or changed.stdout).strip()
+            raise PlexControlError(detail or "Could not change Plex Desktop's mute state.")
+
+
 def send_plex_command(
     plugin_path: str,
     command: str,
@@ -123,6 +200,12 @@ def send_plex_command(
 
     if command not in SUPPORTED_COMMANDS:
         raise PlexControlError(f"Unsupported Plex command: {command}")
+
+    if command == "mute":
+        if not is_plex_running(plugin_path, in_flatpak=in_flatpak):
+            raise PlexControlError("Plex Desktop is not running.")
+        mute_plex_audio(in_flatpak=in_flatpak)
+        return
 
     helper = helper_command(plugin_path, command, in_flatpak=in_flatpak)
     attempts = 13 if launch_if_closed else 1

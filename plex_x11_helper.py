@@ -18,7 +18,6 @@ KEY_COMMANDS = {
     "play_pause": "space",
     "seek_backward": "Left",
     "seek_forward": "Right",
-    "mute": "m",
     "fullscreen": "f",
 }
 MODIFIED_KEY_COMMANDS = {

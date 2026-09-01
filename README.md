@@ -26,7 +26,7 @@ Plex Desktop Controller adds local playback controls for the official **Plex Des
 | **Skip Forward** | Uses Plex Desktop's forward-seek shortcut. |
 | **Previous** | Opens the previous item in the playback queue. |
 | **Next** | Opens the next item in the playback queue. |
-| **Mute** | Toggles Plex Desktop audio mute. |
+| **Mute** | Toggles only Plex Desktop's audio stream, without muting the rest of the system. |
 | **Fullscreen** | Toggles fullscreen mode. |
 
 ## Requirements
@@ -35,6 +35,7 @@ Plex Desktop Controller adds local playback controls for the official **Plex Des
 - StreamController 1.5.0-beta.16 or newer
 - [Plex Desktop from Flathub](https://flathub.org/apps/tv.plex.PlexDesktop) (`tv.plex.PlexDesktop`)
 - An X11 or XWayland desktop session
+- PipeWire with WirePlumber (`wpctl`), used for Plex-only mute control
 
 Plex Desktop's Flatpak runs through X11/XWayland. The plugin controls only the local Plex Desktop window; it does not control Plex on a television, streaming box, phone, or another computer.
 

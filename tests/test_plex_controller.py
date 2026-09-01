@@ -102,6 +102,46 @@ class HostBridgeTests(unittest.TestCase):
             )
         self.assertEqual(run.call_count, 1)
 
+    def test_audio_stream_ids_only_come_from_the_audio_streams_section(self):
+        status = """Audio
+ ├─ Sinks:
+ │  * 42. alsa_output
+ └─ Streams:
+       81. Plex Desktop
+       82. Firefox
+Video
+ └─ Streams:
+       99. Camera
+"""
+        self.assertEqual(host_bridge._audio_stream_ids(status), ["81", "82"])
+
+    @patch("host_bridge.is_plex_running", return_value=True)
+    @patch("host_bridge.subprocess.run")
+    def test_mute_controls_only_the_plex_pipewire_stream(self, run, _running):
+        run.side_effect = [
+            subprocess.CompletedProcess([], 0, "Audio\n └─ Streams:\n  81. Chromium\n  82. Firefox\n", ""),
+            subprocess.CompletedProcess([], 0, 'application.name = "Plex Desktop"', ""),
+            subprocess.CompletedProcess([], 0, 'application.name = "Firefox"', ""),
+            subprocess.CompletedProcess([], 0, "Volume: 0.75", ""),
+            subprocess.CompletedProcess([], 0, "", ""),
+        ]
+
+        host_bridge.send_plex_command("/plugins/plex", "mute", in_flatpak=True)
+
+        commands = [call.args[0] for call in run.call_args_list]
+        self.assertEqual(commands[-1][-4:], ["wpctl", "set-mute", "81", "1"])
+        self.assertFalse(any(command[-1:] == ["82"] and "set-mute" in command for command in commands))
+
+    @patch("host_bridge.is_plex_running", return_value=True)
+    @patch("host_bridge.subprocess.run")
+    def test_mute_reports_when_plex_has_no_audio_stream(self, run, _running):
+        run.side_effect = [
+            subprocess.CompletedProcess([], 0, "Audio\n └─ Streams:\n  82. Firefox\n", ""),
+            subprocess.CompletedProcess([], 0, 'application.name = "Firefox"', ""),
+        ]
+        with self.assertRaisesRegex(host_bridge.PlexControlError, "Start playback"):
+            host_bridge.send_plex_command("/plugins/plex", "mute", in_flatpak=True)
+
 
 class X11HelperTests(unittest.TestCase):
     def test_all_commands_have_an_explicit_local_mapping(self):
@@ -111,6 +151,7 @@ class X11HelperTests(unittest.TestCase):
             *plex_x11_helper.MEDIA_COMMANDS,
             "focus",
             "launch",
+            "mute",
         }
         self.assertEqual(mapped, host_bridge.SUPPORTED_COMMANDS - {"status"})
 
