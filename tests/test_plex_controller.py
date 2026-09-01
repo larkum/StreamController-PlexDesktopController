@@ -178,6 +178,7 @@ class X11HelperTests(unittest.TestCase):
     def test_kde_wayland_uses_ewmh_activation_not_direct_x_focus(self):
         source = (ROOT / "plex_x11_helper.py").read_text(encoding="utf-8")
         self.assertIn("_NET_ACTIVE_WINDOW", source)
+        self.assertIn("XMapRaised", source)
         self.assertNotIn("XSetInputFocus", source)
 
 
@@ -225,6 +226,7 @@ class PackageTests(unittest.TestCase):
             "previous.svg",
             "next.svg",
             "stop.svg",
+            "volume.svg",
             "mute.svg",
             "fullscreen.svg",
         }

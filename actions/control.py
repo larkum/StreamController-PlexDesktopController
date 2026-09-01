@@ -158,9 +158,12 @@ class PlexCommandAction(ActionCore):
     def _render_idle(self):
         self.hide_error()
         self._claim_unassigned_image_control()
+        icon_name = self.ICON_NAME
+        if self.COMMAND == "mute" and self._muted:
+            icon_name = "mute"
         self.set_media(
             media_path=os.path.join(
-                self.plugin_base.PATH, "assets", f"{self.ICON_NAME}.svg"
+                self.plugin_base.PATH, "assets", f"{icon_name}.svg"
             ),
             size=0.62,
             valign=-0.45,
@@ -234,7 +237,7 @@ class NextAction(PlexCommandAction):
 class MuteAction(PlexCommandAction):
     COMMAND = "mute"
     BUTTON_LABEL = "Mute"
-    ICON_NAME = "mute"
+    ICON_NAME = "volume"
 
 
 class FullscreenAction(PlexCommandAction):

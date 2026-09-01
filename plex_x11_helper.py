@@ -85,6 +85,7 @@ def _configure_x11():
     x11.XFetchName.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_void_p)]
     x11.XFree.argtypes = [ctypes.c_void_p]
     x11.XGetInputFocus.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_int)]
+    x11.XMapRaised.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
     x11.XRaiseWindow.argtypes = [ctypes.c_void_p, ctypes.c_ulong]
     x11.XInternAtom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int]
     x11.XInternAtom.restype = ctypes.c_ulong
@@ -188,6 +189,11 @@ def activate_window(x11, display, root: int, window: int) -> None:
     event.client.data.longs[0] = 2
     event.client.data.longs[1] = CURRENT_TIME
     event.client.data.longs[2] = 0
+    # Mapping first restores a minimized XWayland window. Raising alone only
+    # works when Plex is already visible somewhere in the window stack.
+    x11.XMapRaised(display, window)
+    x11.XFlush(display)
+    time.sleep(0.04)
     x11.XRaiseWindow(display, window)
     status = x11.XSendEvent(
         display,
