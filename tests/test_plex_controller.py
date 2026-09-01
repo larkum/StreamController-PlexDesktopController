@@ -108,6 +108,8 @@ class HostBridgeTests(unittest.TestCase):
  │  * 42. alsa_output
  └─ Streams:
        81. Plex Desktop
+            63. output_FL
+            88. output_FR
        82. Firefox
 Video
  └─ Streams:
@@ -126,8 +128,9 @@ Video
             subprocess.CompletedProcess([], 0, "", ""),
         ]
 
-        host_bridge.send_plex_command("/plugins/plex", "mute", in_flatpak=True)
+        result = host_bridge.send_plex_command("/plugins/plex", "mute", in_flatpak=True)
 
+        self.assertTrue(result)
         commands = [call.args[0] for call in run.call_args_list]
         self.assertEqual(commands[-1][-4:], ["wpctl", "set-mute", "81", "1"])
         self.assertFalse(any(command[-1:] == ["82"] and "set-mute" in command for command in commands))

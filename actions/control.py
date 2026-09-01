@@ -13,7 +13,12 @@ from src.backend.PluginManager.ActionCore import ActionCore
 from src.backend.PluginManager.EventAssigner import EventAssigner
 from src.backend.PluginManager.InputBases import Input as EventInput
 
-from ..host_bridge import PlexControlError, is_plex_running, send_plex_command
+from ..host_bridge import (
+    PlexControlError,
+    is_plex_running,
+    plex_audio_muted,
+    send_plex_command,
+)
 
 
 PLEX_ORANGE = [229, 160, 13, 255]
@@ -33,6 +38,7 @@ class PlexCommandAction(ActionCore):
         self.allow_event_configuration = True
         self._running = False
         self._plex_running = None
+        self._muted = None
         self._status_check_running = False
         self._status_timer_id = None
         self.event_manager.add_event_assigner(
@@ -68,8 +74,9 @@ class PlexCommandAction(ActionCore):
 
     def _worker(self):
         error = ""
+        result = None
         try:
-            send_plex_command(
+            result = send_plex_command(
                 self.plugin_base.PATH,
                 self.COMMAND,
             )
@@ -78,9 +85,9 @@ class PlexCommandAction(ActionCore):
         except Exception as exc:
             log.exception("Unexpected Plex Desktop Controller failure")
             error = f"Unexpected error: {exc}"
-        GLib.idle_add(self._finish, error)
+        GLib.idle_add(self._finish, error, result)
 
-    def _finish(self, error: str):
+    def _finish(self, error: str, result: bool | None = None):
         self._running = False
         if error:
             log.error(f"Plex Desktop Controller: {error}")
@@ -92,7 +99,12 @@ class PlexCommandAction(ActionCore):
             self.show_error()
         else:
             self._plex_running = True
-            self.set_bottom_label("Sent", color=SUCCESS_GREEN, font_size=8)
+            if self.COMMAND == "mute" and result is not None:
+                self._muted = result
+                label = "Muted" if result else "Unmuted"
+                self.set_bottom_label(label, color=SUCCESS_GREEN, font_size=8)
+            else:
+                self.set_bottom_label("Sent", color=SUCCESS_GREEN, font_size=8)
             GLib.timeout_add(900, self._restore_idle)
         return False
 
@@ -120,16 +132,21 @@ class PlexCommandAction(ActionCore):
 
     def _status_worker(self):
         running = None
+        muted = None
         try:
             running = is_plex_running(self.plugin_base.PATH)
+            if running and self.COMMAND == "mute":
+                muted = plex_audio_muted()
         except PlexControlError as exc:
             log.debug(f"Could not refresh Plex Desktop status: {exc}")
-        GLib.idle_add(self._finish_status_check, running)
+        GLib.idle_add(self._finish_status_check, running, muted)
 
-    def _finish_status_check(self, running: bool | None):
+    def _finish_status_check(self, running: bool | None, muted: bool | None = None):
         self._status_check_running = False
         if running is not None:
             self._plex_running = running
+            if self.COMMAND == "mute":
+                self._muted = muted
             if not self._running:
                 self._render_idle()
         return False
@@ -153,6 +170,8 @@ class PlexCommandAction(ActionCore):
         self.set_center_label(None, update=False)
         if self.COMMAND != "launch" and self._plex_running is False:
             self.set_bottom_label(NOT_RUNNING_MESSAGE, color=ERROR_RED, font_size=7)
+        elif self.COMMAND == "mute" and self._muted:
+            self.set_bottom_label("Muted", color=ERROR_RED, font_size=8)
         else:
             self.set_bottom_label(self.BUTTON_LABEL, color=PLEX_ORANGE, font_size=8)
 
