@@ -107,6 +107,7 @@ class X11HelperTests(unittest.TestCase):
     def test_all_commands_have_an_explicit_local_mapping(self):
         mapped = {
             *plex_x11_helper.KEY_COMMANDS,
+            *plex_x11_helper.MODIFIED_KEY_COMMANDS,
             *plex_x11_helper.MEDIA_COMMANDS,
             "focus",
             "launch",
@@ -117,6 +118,18 @@ class X11HelperTests(unittest.TestCase):
         self.assertEqual(plex_x11_helper.KEY_COMMANDS["play_pause"], "space")
         self.assertEqual(plex_x11_helper.KEY_COMMANDS["seek_backward"], "Left")
         self.assertEqual(plex_x11_helper.KEY_COMMANDS["seek_forward"], "Right")
+
+    def test_previous_and_next_use_plex_window_shortcuts_on_linux(self):
+        self.assertEqual(
+            plex_x11_helper.MODIFIED_KEY_COMMANDS["previous"],
+            ("Left", ("Shift_L",)),
+        )
+        self.assertEqual(
+            plex_x11_helper.MODIFIED_KEY_COMMANDS["next"],
+            ("Right", ("Shift_L",)),
+        )
+        self.assertNotIn("previous", plex_x11_helper.MEDIA_COMMANDS)
+        self.assertNotIn("next", plex_x11_helper.MEDIA_COMMANDS)
 
     def test_kde_wayland_uses_ewmh_activation_not_direct_x_focus(self):
         source = (ROOT / "plex_x11_helper.py").read_text(encoding="utf-8")

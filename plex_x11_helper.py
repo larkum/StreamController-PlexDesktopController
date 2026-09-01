@@ -21,10 +21,12 @@ KEY_COMMANDS = {
     "mute": "m",
     "fullscreen": "f",
 }
+MODIFIED_KEY_COMMANDS = {
+    "previous": ("Left", ("Shift_L",)),
+    "next": ("Right", ("Shift_L",)),
+}
 MEDIA_COMMANDS = {
     "stop": "XF86AudioStop",
-    "previous": "XF86AudioPrev",
-    "next": "XF86AudioNext",
 }
 
 
@@ -200,20 +202,42 @@ def activate_window(x11, display, root: int, window: int) -> None:
         raise RuntimeError("The desktop rejected the Plex window activation request.")
 
 
-def send_key(x11, xtst, display, keysym_name: str) -> None:
+def _keycode(x11, display, keysym_name: str) -> int:
     keysym = x11.XStringToKeysym(keysym_name.encode("ascii"))
     keycode = x11.XKeysymToKeycode(display, keysym)
     if not keysym or not keycode:
         raise RuntimeError(f"X11 does not recognise {keysym_name}.")
+    return keycode
+
+
+def send_key(
+    x11,
+    xtst,
+    display,
+    keysym_name: str,
+    modifiers: tuple[str, ...] = (),
+) -> None:
+    modifier_codes = [_keycode(x11, display, name) for name in modifiers]
+    keycode = _keycode(x11, display, keysym_name)
+    for modifier_code in modifier_codes:
+        xtst.XTestFakeKeyEvent(display, modifier_code, 1, CURRENT_TIME)
     xtst.XTestFakeKeyEvent(display, keycode, 1, CURRENT_TIME)
     x11.XFlush(display)
     time.sleep(0.04)
     xtst.XTestFakeKeyEvent(display, keycode, 0, CURRENT_TIME)
+    for modifier_code in reversed(modifier_codes):
+        xtst.XTestFakeKeyEvent(display, modifier_code, 0, CURRENT_TIME)
     x11.XFlush(display)
 
 
 def main(command: str) -> int:
-    if command not in {*KEY_COMMANDS, *MEDIA_COMMANDS, "focus", "status"}:
+    if command not in {
+        *KEY_COMMANDS,
+        *MODIFIED_KEY_COMMANDS,
+        *MEDIA_COMMANDS,
+        "focus",
+        "status",
+    }:
         print(f"Unsupported command: {command}", file=sys.stderr)
         return 2
     try:
@@ -244,8 +268,12 @@ def main(command: str) -> int:
             )
             activate_window(x11, display, root, plex_window)
             time.sleep(0.12)
-            keysym = MEDIA_COMMANDS.get(command) or KEY_COMMANDS[command]
-            send_key(x11, xtst, display, keysym)
+            if command in MODIFIED_KEY_COMMANDS:
+                keysym, modifiers = MODIFIED_KEY_COMMANDS[command]
+                send_key(x11, xtst, display, keysym, modifiers)
+            else:
+                keysym = MEDIA_COMMANDS.get(command) or KEY_COMMANDS[command]
+                send_key(x11, xtst, display, keysym)
             time.sleep(0.08)
             if previous_window and previous_window != plex_window:
                 activate_window(x11, display, root, previous_window)
