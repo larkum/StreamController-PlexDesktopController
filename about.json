@@ -1,0 +1,9 @@
+{
+  "author": "Larkum",
+  "copyright": "Copyright (C) 2026 Larkum",
+  "license": "GPL-3.0",
+  "license-url": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "comments": {"en_US": "Local StreamController playback controls for the Plex Desktop Flatpak."},
+  "support": "https://github.com/larkum/StreamController-PlexDesktopController/issues",
+  "website": "https://github.com/larkum/StreamController-PlexDesktopController"
+}

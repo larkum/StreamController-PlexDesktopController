@@ -1,0 +1,20 @@
+{
+  "assets/*.svg": {
+    "copyright": "Copyright (C) 2026 Larkum",
+    "license": "GPL-3.0",
+    "license-url": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "description": "Original generic media-control artwork created for Plex Desktop Controller."
+  },
+  "assets/plex-desktop-controller-icon.png": {
+    "copyright": "Copyright (C) 2026 Larkum",
+    "license": "GPL-3.0",
+    "license-url": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "description": "Original Plex Desktop Controller plugin icon generated for this project."
+  },
+  "store/Thumbnail.png": {
+    "copyright": "Copyright (C) 2026 Larkum",
+    "license": "GPL-3.0",
+    "license-url": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "description": "Original Plex Desktop Controller store banner generated for this project."
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "plugin": {
+    "description": "Controls the local Flathub Plex Desktop application without Plex account credentials.",
+    "requirements": "Plex Desktop from Flathub (tv.plex.PlexDesktop) and an X11/XWayland desktop session."
+  },
+  "actions": {
+    "Launch": {"name": "Open Plex", "description": "Launch Plex Desktop.", "settings": {}},
+    "Focus": {"name": "Focus Plex", "description": "Bring the Plex Desktop window to the front.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "PlayPause": {"name": "Play / Pause", "description": "Toggle playback in Plex Desktop.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "SeekBackward": {"name": "Skip Back", "description": "Use Plex Desktop's backward seek command.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "SeekForward": {"name": "Skip Forward", "description": "Use Plex Desktop's forward seek command.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "Previous": {"name": "Previous", "description": "Go to the previous playback item.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "Next": {"name": "Next", "description": "Go to the next playback item.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "Stop": {"name": "Stop", "description": "Stop Plex Desktop playback.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "Mute": {"name": "Mute", "description": "Toggle mute in Plex Desktop.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}},
+    "Fullscreen": {"name": "Fullscreen", "description": "Toggle Plex Desktop fullscreen mode.", "settings": {"launch_if_closed": "Launch Plex Desktop automatically when it is not running."}}
+  }
+}
