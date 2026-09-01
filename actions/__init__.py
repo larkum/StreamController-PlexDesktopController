@@ -1,5 +1,4 @@
 from .control import (
-    FocusPlexAction,
     FullscreenAction,
     LaunchPlexAction,
     MuteAction,
@@ -12,7 +11,6 @@ from .control import (
 )
 
 __all__ = [
-    "FocusPlexAction",
     "FullscreenAction",
     "LaunchPlexAction",
     "MuteAction",

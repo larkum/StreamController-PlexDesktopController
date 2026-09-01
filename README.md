@@ -6,7 +6,7 @@ Plex Desktop Controller adds local playback controls for the official **Plex Des
 
 ## Features
 
-- Open Plex Desktop or bring its window to the front
+- Open Plex Desktop once, or bring its existing window to the front
 - Play/pause and stop playback
 - Skip backward or forward
 - Go to the previous or next playback item
@@ -19,8 +19,7 @@ Plex Desktop Controller adds local playback controls for the official **Plex Des
 
 | Action | What it does |
 | --- | --- |
-| **Open Plex** | Starts the Plex Desktop Flatpak. |
-| **Focus Plex** | Brings the Plex window to the front. |
+| **Open Plex** | Starts Plex Desktop if needed, otherwise brings its existing window to the front. |
 | **Play / Pause** | Toggles playback. |
 | **Stop** | Stops the current playback. |
 | **Skip Back** | Uses Plex Desktop's backward-seek shortcut. |

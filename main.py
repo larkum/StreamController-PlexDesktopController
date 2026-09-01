@@ -11,7 +11,6 @@ from src.backend.PluginManager.ActionInputSupport import ActionInputSupport
 from src.backend.PluginManager.PluginBase import PluginBase
 
 from .actions import (
-    FocusPlexAction,
     FullscreenAction,
     LaunchPlexAction,
     MuteAction,
@@ -25,8 +24,7 @@ from .actions import (
 
 
 ACTIONS = (
-    (LaunchPlexAction, "Launch", "Open Plex", "launch", "Launch Plex Desktop."),
-    (FocusPlexAction, "Focus", "Focus Plex", "focus", "Bring Plex Desktop to the front."),
+    (LaunchPlexAction, "Launch", "Open Plex", "launch", "Open Plex Desktop or bring its existing window to the front."),
     (PlayPauseAction, "PlayPause", "Play / Pause", "play-pause", "Toggle local Plex playback."),
     (SeekBackwardAction, "SeekBackward", "Skip Back", "back", "Seek backward in the current item."),
     (SeekForwardAction, "SeekForward", "Skip Forward", "forward", "Seek forward in the current item."),

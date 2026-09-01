@@ -148,13 +148,6 @@ class LaunchPlexAction(PlexCommandAction):
     ICON_NAME = "launch"
 
 
-class FocusPlexAction(PlexCommandAction):
-    COMMAND = "focus"
-    BUTTON_LABEL = "Focus Plex"
-    ICON_NAME = "focus"
-    DEFAULT_LAUNCH_IF_CLOSED = True
-
-
 class PlayPauseAction(PlexCommandAction):
     COMMAND = "play_pause"
     BUTTON_LABEL = "Play / Pause"

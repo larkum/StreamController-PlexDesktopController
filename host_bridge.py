@@ -86,9 +86,14 @@ def send_plex_command(
     in_flatpak: bool | None = None,
 ) -> None:
     if command == "launch":
-        if not is_plex_installed(in_flatpak=in_flatpak):
-            raise PlexControlError("Plex Desktop is not installed from Flathub.")
-        launch_plex(in_flatpak=in_flatpak)
+        # "Open Plex" is intentionally idempotent: focus the existing window,
+        # or launch the Flatpak once and wait for that window to become ready.
+        send_plex_command(
+            plugin_path,
+            "focus",
+            launch_if_closed=True,
+            in_flatpak=in_flatpak,
+        )
         return
 
     if command not in SUPPORTED_COMMANDS:

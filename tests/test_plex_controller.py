@@ -15,6 +15,32 @@ import plex_x11_helper
 
 
 class HostBridgeTests(unittest.TestCase):
+    @patch("host_bridge.launch_plex")
+    @patch("host_bridge.subprocess.run")
+    def test_open_plex_focuses_an_existing_window_without_launching_another(self, run, launch):
+        run.return_value = subprocess.CompletedProcess([], 0, "", "")
+        host_bridge.send_plex_command(
+            "/plugins/plex", "launch", in_flatpak=True
+        )
+        launch.assert_not_called()
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(run.call_args.args[0][-1], "focus")
+
+    @patch("host_bridge.launch_plex")
+    @patch("host_bridge.is_plex_installed", return_value=True)
+    @patch("host_bridge.time.sleep")
+    @patch("host_bridge.subprocess.run")
+    def test_open_plex_launches_once_when_closed(self, run, _sleep, _installed, launch):
+        run.side_effect = [
+            subprocess.CompletedProcess([], 3, "", "Plex Desktop is not running."),
+            subprocess.CompletedProcess([], 0, "", ""),
+        ]
+        host_bridge.send_plex_command(
+            "/plugins/plex", "launch", in_flatpak=True
+        )
+        launch.assert_called_once_with(in_flatpak=True)
+        self.assertEqual(run.call_count, 2)
+
     def test_flatpak_helper_runs_on_the_host_without_a_shell(self):
         command = host_bridge.helper_command("/plugins/plex", "play_pause", in_flatpak=True)
         self.assertEqual(
@@ -93,6 +119,11 @@ class X11HelperTests(unittest.TestCase):
 
 
 class PackageTests(unittest.TestCase):
+    def test_open_action_replaces_the_separate_focus_action(self):
+        actions = json.loads((ROOT / "actions.json").read_text(encoding="utf-8"))["actions"]
+        self.assertIn("Launch", actions)
+        self.assertNotIn("Focus", actions)
+
     def test_manifest_is_store_ready_version_010(self):
         manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(manifest["id"], "com_larkum_PlexDesktopController")
@@ -108,6 +139,11 @@ class PackageTests(unittest.TestCase):
         for name in ("manifest.json", "actions.json", "about.json", "attribution.json"):
             with self.subTest(name=name):
                 json.loads((ROOT / name).read_text(encoding="utf-8"))
+
+    def test_store_attribution_has_generic_metadata(self):
+        attribution = json.loads((ROOT / "attribution.json").read_text(encoding="utf-8"))
+        self.assertEqual(attribution["generic"]["license"], "GPL-3.0")
+        self.assertIn("original-url", attribution["generic"])
 
     def test_every_action_icon_is_valid_svg(self):
         expected = {

@@ -1,4 +1,11 @@
 {
+  "generic": {
+    "copyright": "Copyright (C) 2026 Larkum",
+    "original-url": "https://github.com/larkum/StreamController-PlexDesktopController",
+    "license": "GPL-3.0",
+    "license-url": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "description": "Original code and artwork created for Plex Desktop Controller. This independent community plugin is not affiliated with or endorsed by Plex, Inc."
+  },
   "assets/*.svg": {
     "copyright": "Copyright (C) 2026 Larkum",
     "license": "GPL-3.0",
