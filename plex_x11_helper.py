@@ -213,7 +213,7 @@ def send_key(x11, xtst, display, keysym_name: str) -> None:
 
 
 def main(command: str) -> int:
-    if command not in {*KEY_COMMANDS, *MEDIA_COMMANDS, "focus"}:
+    if command not in {*KEY_COMMANDS, *MEDIA_COMMANDS, "focus", "status"}:
         print(f"Unsupported command: {command}", file=sys.stderr)
         return 2
     try:
@@ -228,6 +228,9 @@ def main(command: str) -> int:
             if not plex_window:
                 print("Plex Desktop is not running.", file=sys.stderr)
                 return 3
+
+            if command == "status":
+                return 0
 
             if command == "focus":
                 activate_window(x11, display, root, plex_window)

@@ -11,7 +11,7 @@ Plex Desktop Controller adds local playback controls for the official **Plex Des
 - Skip backward or forward
 - Go to the previous or next playback item
 - Toggle mute or fullscreen mode
-- Optionally launch Plex automatically when a control is pressed while it is closed
+- Show **Plex not running** on playback controls while the app is closed
 - Assign each command to a short press, long hold, or another supported StreamController key event
 - Local-only operation with no Plex credentials or plugin network requests
 
@@ -82,7 +82,7 @@ Reopen StreamController when the download finishes. To update this installation 
 2. Open Plex Desktop and start playing something.
 3. Press the assigned key.
 
-For any action except **Open Plex**, enable **Launch Plex if closed** if the button should start Plex automatically before sending its command.
+Only **Open Plex** can start the app. The playback controls never launch Plex and display **Plex not running** while its window is closed.
 
 To change the trigger, open the action's event configuration and assign it to a short press, long hold, or another supported key event. This makes it possible to place multiple compatible actions on one physical key.
 

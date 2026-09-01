@@ -19,6 +19,7 @@ SUPPORTED_COMMANDS = {
     "next",
     "mute",
     "fullscreen",
+    "status",
 }
 
 
@@ -62,6 +63,30 @@ def is_plex_installed(in_flatpak: bool | None = None) -> bool:
         ).returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
+
+
+def is_plex_running(
+    plugin_path: str,
+    in_flatpak: bool | None = None,
+) -> bool:
+    command = helper_command(plugin_path, "status", in_flatpak=in_flatpak)
+    try:
+        result = subprocess.run(
+            command,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        raise PlexControlError(f"Could not check Plex Desktop: {exc}") from exc
+    if result.returncode == 0:
+        return True
+    if result.returncode == 3:
+        return False
+    detail = (result.stderr or result.stdout).strip()
+    raise PlexControlError(detail or "Could not check whether Plex Desktop is running.")
 
 
 def launch_plex(in_flatpak: bool | None = None) -> None:

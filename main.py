@@ -55,12 +55,7 @@ class PlexDesktopControllerPlugin(PluginBase):
                         "The Flathub Plex Desktop app (tv.plex.PlexDesktop) "
                         "running in an X11/XWayland desktop session."
                     ),
-                    settings_schema={
-                        "launch_if_closed": {
-                            "type": "boolean",
-                            "default": action_core.DEFAULT_LAUNCH_IF_CLOSED,
-                        }
-                    },
+                    settings_schema={},
                     action_support={
                         Input.Key: ActionInputSupport.SUPPORTED,
                         Input.Dial: ActionInputSupport.UNSUPPORTED,

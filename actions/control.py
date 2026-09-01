@@ -6,33 +6,35 @@ import threading
 import gi
 
 gi.require_version("GLib", "2.0")
-gi.require_version("Adw", "1")
-from gi.repository import Adw, GLib
+from gi.repository import GLib
 from loguru import logger as log
 
 from src.backend.PluginManager.ActionCore import ActionCore
 from src.backend.PluginManager.EventAssigner import EventAssigner
 from src.backend.PluginManager.InputBases import Input as EventInput
 
-from ..host_bridge import PlexControlError, send_plex_command
+from ..host_bridge import PlexControlError, is_plex_running, send_plex_command
 
 
 PLEX_ORANGE = [229, 160, 13, 255]
 SUCCESS_GREEN = [94, 214, 126, 255]
 ERROR_RED = [255, 82, 82, 255]
+STATUS_INTERVAL_SECONDS = 3
+NOT_RUNNING_MESSAGE = "Plex not running"
 
 
 class PlexCommandAction(ActionCore):
     COMMAND = ""
     BUTTON_LABEL = "Plex"
     ICON_NAME = "plex"
-    DEFAULT_LAUNCH_IF_CLOSED = False
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.has_configuration = True
         self.allow_event_configuration = True
         self._running = False
+        self._plex_running = None
+        self._status_check_running = False
+        self._status_timer_id = None
         self.event_manager.add_event_assigner(
             EventAssigner(
                 id=f"plex-{self.COMMAND.replace('_', '-')}",
@@ -44,28 +46,14 @@ class PlexCommandAction(ActionCore):
 
     def on_ready(self):
         self._render_idle()
+        self._start_status_monitor()
 
     def on_update(self):
         self._render_idle()
+        self._start_status_monitor()
 
     def get_config_rows(self):
-        if self.COMMAND == "launch":
-            return []
-        settings = self.get_settings() or {}
-        row = Adw.SwitchRow(
-            title="Launch Plex if closed",
-            subtitle="Start the Plex Desktop Flatpak before sending this command.",
-        )
-        row.set_active(
-            bool(settings.get("launch_if_closed", self.DEFAULT_LAUNCH_IF_CLOSED))
-        )
-        row.connect("notify::active", self._on_launch_if_closed_changed)
-        return [row]
-
-    def _on_launch_if_closed_changed(self, row, _property):
-        settings = dict(self.get_settings() or {})
-        settings["launch_if_closed"] = row.get_active()
-        self.set_settings(settings)
+        return []
 
     def _trigger(self):
         if self._running:
@@ -73,23 +61,17 @@ class PlexCommandAction(ActionCore):
         self._running = True
         self.hide_error()
         self.set_bottom_label("Sending…", color=PLEX_ORANGE, font_size=8)
-        settings = self.get_settings() or {}
-        launch_if_closed = bool(
-            settings.get("launch_if_closed", self.DEFAULT_LAUNCH_IF_CLOSED)
-        )
         threading.Thread(
             target=self._worker,
-            args=(launch_if_closed,),
             daemon=True,
         ).start()
 
-    def _worker(self, launch_if_closed: bool):
+    def _worker(self):
         error = ""
         try:
             send_plex_command(
                 self.plugin_base.PATH,
                 self.COMMAND,
-                launch_if_closed=launch_if_closed,
             )
         except PlexControlError as exc:
             error = str(exc)
@@ -102,11 +84,54 @@ class PlexCommandAction(ActionCore):
         self._running = False
         if error:
             log.error(f"Plex Desktop Controller: {error}")
+            if error == "Plex Desktop is not running." and self.COMMAND != "launch":
+                self._plex_running = False
+                self._render_idle()
+                return False
             self.set_bottom_label(error[:24], color=ERROR_RED, font_size=7)
             self.show_error()
         else:
+            self._plex_running = True
             self.set_bottom_label("Sent", color=SUCCESS_GREEN, font_size=8)
             GLib.timeout_add(900, self._restore_idle)
+        return False
+
+    def _start_status_monitor(self):
+        if self.COMMAND == "launch" or self._status_timer_id is not None:
+            return
+        self._request_status_check()
+        self._status_timer_id = GLib.timeout_add_seconds(
+            STATUS_INTERVAL_SECONDS,
+            self._poll_status,
+        )
+
+    def _poll_status(self):
+        if self.get_state() is None:
+            self._status_timer_id = None
+            return False
+        self._request_status_check()
+        return True
+
+    def _request_status_check(self):
+        if self._status_check_running:
+            return
+        self._status_check_running = True
+        threading.Thread(target=self._status_worker, daemon=True).start()
+
+    def _status_worker(self):
+        running = None
+        try:
+            running = is_plex_running(self.plugin_base.PATH)
+        except PlexControlError as exc:
+            log.debug(f"Could not refresh Plex Desktop status: {exc}")
+        GLib.idle_add(self._finish_status_check, running)
+
+    def _finish_status_check(self, running: bool | None):
+        self._status_check_running = False
+        if running is not None:
+            self._plex_running = running
+            if not self._running:
+                self._render_idle()
         return False
 
     def _restore_idle(self):
@@ -126,7 +151,10 @@ class PlexCommandAction(ActionCore):
         )
         self.set_top_label(None, update=False)
         self.set_center_label(None, update=False)
-        self.set_bottom_label(self.BUTTON_LABEL, color=PLEX_ORANGE, font_size=8)
+        if self.COMMAND != "launch" and self._plex_running is False:
+            self.set_bottom_label(NOT_RUNNING_MESSAGE, color=ERROR_RED, font_size=7)
+        else:
+            self.set_bottom_label(self.BUTTON_LABEL, color=PLEX_ORANGE, font_size=8)
 
     def _claim_unassigned_image_control(self):
         state = self.get_state()

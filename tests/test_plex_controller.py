@@ -70,6 +70,19 @@ class HostBridgeTests(unittest.TestCase):
             host_bridge.helper_command("/plugins/plex", "delete_everything", in_flatpak=True)
 
     @patch("host_bridge.subprocess.run")
+    def test_status_check_reports_when_plex_is_running(self, run):
+        run.return_value = subprocess.CompletedProcess([], 0, "", "")
+        self.assertTrue(host_bridge.is_plex_running("/plugins/plex", in_flatpak=True))
+        self.assertEqual(run.call_args.args[0][-1], "status")
+
+    @patch("host_bridge.subprocess.run")
+    def test_status_check_reports_when_plex_is_closed(self, run):
+        run.return_value = subprocess.CompletedProcess(
+            [], 3, "", "Plex Desktop is not running."
+        )
+        self.assertFalse(host_bridge.is_plex_running("/plugins/plex", in_flatpak=True))
+
+    @patch("host_bridge.subprocess.run")
     def test_successful_control_command_is_sent_once(self, run):
         run.return_value = subprocess.CompletedProcess([], 0, "", "")
         host_bridge.send_plex_command(
@@ -78,23 +91,16 @@ class HostBridgeTests(unittest.TestCase):
         run.assert_called_once()
         self.assertNotIn("shell", run.call_args.kwargs)
 
-    @patch("host_bridge.launch_plex")
-    @patch("host_bridge.is_plex_installed", return_value=True)
-    @patch("host_bridge.time.sleep")
     @patch("host_bridge.subprocess.run")
-    def test_closed_plex_can_be_launched_and_retried(self, run, _sleep, _installed, launch):
-        run.side_effect = [
-            subprocess.CompletedProcess([], 3, "", "Plex Desktop is not running."),
-            subprocess.CompletedProcess([], 0, "", ""),
-        ]
-        host_bridge.send_plex_command(
-            "/plugins/plex",
-            "play_pause",
-            launch_if_closed=True,
-            in_flatpak=True,
+    def test_closed_playback_control_does_not_launch_plex(self, run):
+        run.return_value = subprocess.CompletedProcess(
+            [], 3, "", "Plex Desktop is not running."
         )
-        launch.assert_called_once_with(in_flatpak=True)
-        self.assertEqual(run.call_count, 2)
+        with self.assertRaisesRegex(host_bridge.PlexControlError, "not running"):
+            host_bridge.send_plex_command(
+                "/plugins/plex", "play_pause", in_flatpak=True
+            )
+        self.assertEqual(run.call_count, 1)
 
 
 class X11HelperTests(unittest.TestCase):
@@ -105,7 +111,7 @@ class X11HelperTests(unittest.TestCase):
             "focus",
             "launch",
         }
-        self.assertEqual(mapped, host_bridge.SUPPORTED_COMMANDS)
+        self.assertEqual(mapped, host_bridge.SUPPORTED_COMMANDS - {"status"})
 
     def test_seek_and_playback_shortcuts_are_stable(self):
         self.assertEqual(plex_x11_helper.KEY_COMMANDS["play_pause"], "space")
@@ -123,6 +129,13 @@ class PackageTests(unittest.TestCase):
         actions = json.loads((ROOT / "actions.json").read_text(encoding="utf-8"))["actions"]
         self.assertIn("Launch", actions)
         self.assertNotIn("Focus", actions)
+
+    def test_only_open_plex_can_launch_the_application(self):
+        actions = json.loads((ROOT / "actions.json").read_text(encoding="utf-8"))["actions"]
+        self.assertTrue(all(not action["settings"] for action in actions.values()))
+        source = (ROOT / "actions" / "control.py").read_text(encoding="utf-8")
+        self.assertNotIn("Launch Plex if closed", source)
+        self.assertIn('NOT_RUNNING_MESSAGE = "Plex not running"', source)
 
     def test_manifest_is_store_ready_version_010(self):
         manifest = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
