@@ -33,6 +33,34 @@ class XClassHint(ctypes.Structure):
     _fields_ = [("res_name", ctypes.c_void_p), ("res_class", ctypes.c_void_p)]
 
 
+class XWindowAttributes(ctypes.Structure):
+    _fields_ = [
+        ("x", ctypes.c_int),
+        ("y", ctypes.c_int),
+        ("width", ctypes.c_uint),
+        ("height", ctypes.c_uint),
+        ("border_width", ctypes.c_uint),
+        ("depth", ctypes.c_uint),
+        ("visual", ctypes.c_void_p),
+        ("root", ctypes.c_ulong),
+        ("window_class", ctypes.c_int),
+        ("bit_gravity", ctypes.c_int),
+        ("win_gravity", ctypes.c_int),
+        ("backing_store", ctypes.c_int),
+        ("backing_planes", ctypes.c_ulong),
+        ("backing_pixel", ctypes.c_ulong),
+        ("save_under", ctypes.c_int),
+        ("colormap", ctypes.c_ulong),
+        ("map_installed", ctypes.c_int),
+        ("map_state", ctypes.c_int),
+        ("all_event_masks", ctypes.c_long),
+        ("your_event_mask", ctypes.c_long),
+        ("do_not_propagate_mask", ctypes.c_long),
+        ("override_redirect", ctypes.c_int),
+        ("screen", ctypes.c_void_p),
+    ]
+
+
 class XClientMessageData(ctypes.Union):
     _fields_ = [
         ("bytes", ctypes.c_char * 20),
@@ -82,6 +110,11 @@ def _configure_x11():
         ctypes.POINTER(ctypes.c_uint),
     ]
     x11.XGetClassHint.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(XClassHint)]
+    x11.XGetWindowAttributes.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_ulong,
+        ctypes.POINTER(XWindowAttributes),
+    ]
     x11.XFetchName.argtypes = [ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_void_p)]
     x11.XFree.argtypes = [ctypes.c_void_p]
     x11.XGetInputFocus.argtypes = [ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong), ctypes.POINTER(ctypes.c_int)]
@@ -143,11 +176,28 @@ def _children(x11, display, window: int) -> list[int]:
 
 
 def find_plex_window(x11, display, root: int) -> int | None:
-    for window in reversed(_children(x11, display, root)):
+    candidates = []
+    for stacking_order, window in enumerate(_children(x11, display, root)):
         identity = _window_text(x11, display, window)
-        if "plex" in identity and "plexamp" not in identity:
-            return window
-    return None
+        if not is_plex_app_window(identity):
+            continue
+        attributes = XWindowAttributes()
+        if not x11.XGetWindowAttributes(display, window, ctypes.byref(attributes)):
+            continue
+        if attributes.override_redirect:
+            continue
+        area = int(attributes.width) * int(attributes.height)
+        candidates.append((area, stacking_order, window))
+    return max(candidates, default=(0, 0, None))[2]
+
+
+def is_plex_app_window(identity: str) -> bool:
+    identity = identity.casefold()
+    return (
+        "plex" in identity
+        and "plexamp" not in identity
+        and "selection owner" not in identity
+    )
 
 
 def top_level_window(x11, display, root: int, window: int) -> int | None:

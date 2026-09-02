@@ -147,6 +147,13 @@ Video
 
 
 class X11HelperTests(unittest.TestCase):
+    def test_hidden_qt_helper_windows_are_not_treated_as_plex(self):
+        self.assertTrue(plex_x11_helper.is_plex_app_window("plex Plex"))
+        self.assertFalse(
+            plex_x11_helper.is_plex_app_window("Qt Selection Owner for Plex")
+        )
+        self.assertFalse(plex_x11_helper.is_plex_app_window("Plexamp"))
+
     def test_all_commands_have_an_explicit_local_mapping(self):
         mapped = {
             *plex_x11_helper.KEY_COMMANDS,
