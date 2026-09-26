@@ -110,6 +110,10 @@ Plex Desktop Controller operates locally. It stores no Plex credentials, collect
 
 If the problem continues, [open an issue](https://github.com/larkum/StreamController-PlexDesktopController/issues) and include the StreamController log and your desktop environment.
 
+## Support
+
+Visit my Discord Server for Support https://discord.gg/scgSjec98P
+
 ## Licence and trademark
 
 Plex Desktop Controller is licensed under [GPL-3.0](LICENSE). The icon, banner, and action artwork are original assets created for this project.
